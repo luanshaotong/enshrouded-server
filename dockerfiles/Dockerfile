@@ -1,4 +1,4 @@
-FROM steamcmd/steamcmd:ubuntu-22@sha256:7341d241fd49f9371d31a9e2842d9a045d7a074f9e4c8c8d5a392bd8869f5e9d
+FROM steamcmd/steamcmd:ubuntu-22@sha256:7341d241fd49f9371d31a9e2842d9a045d7a074f9e4c8c8d5a392bd8869f5e9d as base
 LABEL maintainer="docker@mornedhels.de"
 
 # Install prerequisites
@@ -40,5 +40,15 @@ COPY ../supervisord.conf /etc/supervisor/supervisord.conf
 COPY --chmod=755 ../scripts/default/* ../scripts/wine/* /usr/local/etc/enshrouded/
 
 WORKDIR /usr/local/etc/enshrouded
-CMD ["/usr/local/etc/enshrouded/bootstrap"]
+
+FROM base as builder
+RUN /usr/local/etc/enshrouded/bootstrap & while :; do if [ -f "/opt/enshrouded/server/enshrouded_server.exe" ]; then break; else sleep 7; fi; done
+
+
+
+FROM base
+
+COPY --from=builder /opt/enshrouded /opt/enshrouded-data
+
+CMD ["sh", "-c", "if [ -d /opt/enshrouded-data ]; then mv /opt/enshrouded-data/* /opt/enshrouded/; fi; /usr/local/etc/enshrouded/bootstrap"]
 ENTRYPOINT []
